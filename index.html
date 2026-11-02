@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Канбан-тест нейросетей</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+  /* Планшет-полигон: шапка-тезис, лента вкладок-моделей, живое приложение во всю ширину */
+  :root {
+    --bg: #F3EFF9;
+    --surface: #FFFFFF;
+    --fg: #2E1A47;
+    --muted: #6B5887;
+    --accent: #8B5FBF;
+    --accent-soft: #E7D9F7;
+    --gold: #9C7A2E;
+    --gold-soft: #F7EBC2;
+    --line: #DACDEE;
+    --display: 'Playfair Display', Georgia, serif;
+    --body: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #241238; --surface: #342050; --fg: #FBF6E9; --muted: #CDB9E6;
+    --accent: #C9A8F0; --accent-soft: #46306B; --gold: #E9C86B; --gold-soft: #4A3A1E;
+    --line: #4C3770; color-scheme: dark;
+  } }
+  :root[data-theme="dark"] {
+    --bg: #241238; --surface: #342050; --fg: #FBF6E9; --muted: #CDB9E6;
+    --accent: #C9A8F0; --accent-soft: #46306B; --gold: #E9C86B; --gold-soft: #4A3A1E;
+    --line: #4C3770; color-scheme: dark;
+  }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: var(--body); margin: 0;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 28px 40px;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; }
+  .eyebrow {
+    display: inline-block; background: var(--accent-soft); color: var(--fg);
+    font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+    padding: 7px 14px; border-radius: 999px;
+  }
+  h1 {
+    font-family: var(--display); font-weight: 800;
+    font-size: clamp(30px, 5.4vw, 46px); line-height: 1.1;
+    margin: 14px 0 10px; text-wrap: balance;
+  }
+  h1 em { font-style: italic; color: var(--accent); }
+  .lead { color: var(--muted); font-size: 15.5px; line-height: 1.55; max-width: 64ch; margin: 0 0 18px; }
+  .lead b { color: var(--fg); }
+
+  details.tz {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 14px; padding: 12px 16px; margin-bottom: 18px;
+  }
+  details.tz summary { cursor: pointer; font-weight: 700; font-size: 14px; }
+  details.tz ol { margin: 10px 0 4px; padding-left: 20px; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+  details.tz ol li::marker { color: var(--accent); font-weight: 700; }
+
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .tab {
+    border: 1px solid var(--line); background: var(--surface); color: var(--fg);
+    border-radius: 12px; padding: 9px 13px; cursor: pointer;
+    font-family: var(--body); font-size: 13.5px; font-weight: 700;
+    display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
+    transition: border-color .15s, transform .15s;
+  }
+  .tab small { font-weight: 500; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tab[aria-selected="true"] { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: -1px; }
+  .tab:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .tab:disabled { opacity: .55; cursor: default; }
+  @media (prefers-reduced-motion: no-preference) { .tab:not(:disabled):hover { transform: translateY(-1px); } }
+
+  .meta {
+    display: flex; gap: 8px 18px; flex-wrap: wrap; align-items: baseline;
+    background: var(--surface); border: 1px solid var(--line); border-bottom: none;
+    border-radius: 14px 14px 0 0; padding: 12px 16px; min-width: 0;
+  }
+  .meta .name { font-weight: 800; font-size: 15px; }
+  .meta .stat { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .meta .stat b { color: var(--fg); }
+  .meta .score { margin-left: auto; background: var(--gold-soft); color: var(--gold); font-weight: 800; font-size: 13px; padding: 4px 10px; border-radius: 999px; }
+  .meta .note { flex-basis: 100%; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+
+  .viewer {
+    border: 1px solid var(--line); border-radius: 0 0 14px 14px; overflow: hidden;
+    background: var(--surface);
+  }
+  .viewer iframe { display: block; width: 100%; height: min(72vh, 760px); min-height: 480px; border: 0; background: var(--surface); }
+  .viewer .loading { padding: 48px 16px; text-align: center; color: var(--muted); font-size: 14px; }
+
+  .foot { margin-top: 16px; font-size: 12.5px; color: var(--muted); line-height: 1.6; max-width: 76ch; }
+  .foot b { color: var(--fg); }
+  .brand { margin-top: 10px; font-weight: 800; letter-spacing: .14em; font-size: 13px; color: var(--gold); }
+</style>
+
+<div class="wrap">
+  <span class="eyebrow">Эксперимент NeuralProfit</span>
+  <h1>6 нейросетей получили <em>одно</em> ТЗ.<br>Вот что они построили</h1>
+  <p class="lead">Каждая модель должна была собрать мини-CRM - канбан-доску сделок -
+  <b>одним файлом, за один запрос</b>, по ТЗ из 10 требований. Код не редактировался:
+  что модель отдала, то вы и трогаете. Переключайте вкладки, перетаскивайте карточки,
+  добавляйте сделки - все живое.</p>
+
+  <details class="tz">
+    <summary>ТЗ, которое получила каждая модель (10 требований)</summary>
+    <ol>
+      <li>Колонки «Лиды», «Переговоры», «Оплата», «Закрыто»</li>
+      <li>Добавление сделки: клиент, сумма в рублях, комментарий</li>
+      <li>Перетаскивание карточек мышкой между колонками</li>
+      <li>Автосумма сделок под заголовком каждой колонки</li>
+      <li>Поиск по карточкам на лету</li>
+      <li>Сохранение данных при перезагрузке страницы</li>
+      <li>Редактирование и удаление карточек</li>
+      <li>Темная и светлая тема</li>
+      <li>Адаптив под телефон</li>
+      <li>Весь интерфейс на русском</li>
+    </ol>
+  </details>
+
+  <div class="tabs" role="tablist" aria-label="Модели"></div>
+
+  <div class="meta" id="meta"></div>
+  <div class="viewer"><div class="loading" id="loading">Загружаю приложение…</div><iframe id="frame" title="Приложение выбранной модели" hidden></iframe></div>
+
+  <p class="foot">Как это сделано: одинаковый промпт ушел во все модели через API агрегатора
+  souz.ai 2 ноября 2026. Цена - фактическое списание за запрос из истории кабинета, время - сколько модель генерировала приложение.
+  <b>Код приложений не тронут ни на байт.</b> Единственное вмешательство - каждому
+  приложению подменено хранилище браузера на изолированное, чтобы они не затирали
+  данные друг друга на этой странице. Если что-то не работает - значит, так сгенерила
+  модель, это тоже результат теста.</p>
+  <p class="brand">@NEURALPROFIT</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var MODELS = [
+    { id: 'deepseek-v4.1-flash', name: 'DeepSeek V4.1 Flash', time: '1:57', cost: '1,56 ₽', score: '10/10',
+      note: 'Самое дешевое из рабочих. Без излишеств, но каждый пункт ТЗ на месте.' },
+    { id: 'grok-4.7', name: 'Grok 4.7', time: '2:51', cost: '4,99 ₽', score: '10/10',
+      note: 'Спартанский минимализм: самый короткий код теста (17 КБ), и все работает.' },
+    { id: 'glm-5.3', name: 'GLM 5.3', time: '12:33', cost: '16,91 ₽', score: '10/10*',
+      note: '*Со второй попытки: в общий лимит 32 тысячи токенов не уложился (25,7 тысячи ушло на размышления, код оборвался). С лимитом 64 тысячи думал 12,5 минуты - зато выдал самый дизайнерский вариант теста. Перетаскивание тут свое, на указателе, а удаление просит подтверждения вторым кликом.' },
+    { id: 'claude-sonnet-5.5', name: 'Claude Sonnet 5.5', time: '1:39', cost: '22,66 ₽', score: '10/10',
+      note: 'Самая быстрая генерация. Сверх ТЗ: общий итог воронки, даты сделок, стрелки для переноса без мышки, свое окно подтверждения удаления.' },
+    { id: 'claude-opus-5.5', name: 'Claude Opus 5.5', time: '2:27', cost: '33,35 ₽', score: '10/10',
+      note: 'Сверх ТЗ: дашборд воронки в шапке, тосты-уведомления, стрелки для телефона и подсказка, как пользоваться.' },
+    { id: 'kimi-k3.1-pro', name: 'Kimi K3.1 Pro', time: '3:35', cost: '60,67 ₽', score: '10/10',
+      note: 'Новинка 2 ноября. Плотный аккуратный интерфейс, счетчики сделок, пустые зоны «перетащите сюда». Самая дорогая в тесте.' }
+  ];
+
+  var tablist = document.querySelector('.tabs');
+  var metaEl = document.getElementById('meta');
+  var frame = document.getElementById('frame');
+  var loading = document.getElementById('loading');
+  var cache = {};
+
+  function shim(id) {
+    return '<script>(function(){try{var p=' + JSON.stringify(id + '::') + ';var real=null;' +
+      'try{real=window.localStorage;real.getItem("t");}catch(e){real=null;}' +
+      'var mem={};var store=real?{g:function(k){return real.getItem(p+k);},s:function(k,v){real.setItem(p+k,v);},r:function(k){real.removeItem(p+k);},ks:function(){var a=[],i;for(i=0;i<real.length;i++){var k=real.key(i);if(k&&k.indexOf(p)===0)a.push(k.slice(p.length));}return a;}}' +
+      ':{g:function(k){return Object.prototype.hasOwnProperty.call(mem,k)?mem[k]:null;},s:function(k,v){mem[k]=String(v);},r:function(k){delete mem[k];},ks:function(){return Object.keys(mem);}};' +
+      'var wrap={getItem:function(k){return store.g(k);},setItem:function(k,v){store.s(k,v);},removeItem:function(k){store.r(k);},clear:function(){store.ks().forEach(function(k){store.r(k);});},key:function(i){return store.ks()[i]||null;}};' +
+      'Object.defineProperty(wrap,"length",{get:function(){return store.ks().length;}});' +
+      'Object.defineProperty(window,"localStorage",{get:function(){return wrap;},configurable:true});}catch(e){}})();<\/script>';
+  }
+
+  function load(model, tabBtn) {
+    tablist.querySelectorAll('.tab').forEach(function (t) { t.setAttribute('aria-selected', t === tabBtn ? 'true' : 'false'); });
+    metaEl.innerHTML = '';
+    var name = document.createElement('span'); name.className = 'name'; name.textContent = model.name; metaEl.appendChild(name);
+    if (model.time) { var t = document.createElement('span'); t.className = 'stat'; t.innerHTML = 'генерация <b>' + model.time + '</b>'; metaEl.appendChild(t); }
+    if (model.cost) { var c = document.createElement('span'); c.className = 'stat'; c.innerHTML = 'цена запроса <b>' + model.cost + '</b>'; metaEl.appendChild(c); }
+    if (model.score) { var s = document.createElement('span'); s.className = 'score'; s.textContent = 'чек-лист ' + model.score; metaEl.appendChild(s); }
+    var n = document.createElement('span'); n.className = 'note'; n.textContent = model.note; metaEl.appendChild(n);
+
+    frame.hidden = true; loading.hidden = false; loading.textContent = 'Загружаю приложение…';
+    var done = function (html) {
+      frame.srcdoc = html.replace(/<head([^>]*)>/i, '<head$1>' + shim(model.id));
+      loading.hidden = true; frame.hidden = false;
+    };
+    if (cache[model.id]) { done(cache[model.id]); return; }
+    fetch('kanban/' + model.id + '.html').then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      return r.text();
+    }).then(function (html) { cache[model.id] = html; done(html); })
+      .catch(function () { loading.textContent = 'Не получилось загрузить приложение этой модели.'; });
+  }
+
+  MODELS.forEach(function (m, i) {
+    var b = document.createElement('button');
+    b.className = 'tab'; b.setAttribute('role', 'tab'); b.type = 'button'; b.id = 'tab-' + m.id;
+    var ttl = document.createElement('span'); ttl.textContent = m.name; b.appendChild(ttl);
+    var sub = document.createElement('small');
+    sub.textContent = m.cost + ' · ' + m.time;
+    b.appendChild(sub);
+    b.addEventListener('click', function () { load(m, b); });
+    tablist.appendChild(b);
+    if (i === 0) setTimeout(function () { load(m, b); }, 0);
+  });
+})();
+</script>
+
+</html>

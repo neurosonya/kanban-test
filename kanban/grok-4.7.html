@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Мини-CRM — Канбан сделок</title>
+<style>
+  :root {
+    --bg: #f4f6f9;
+    --surface: #ffffff;
+    --text: #1c2430;
+    --muted: #6b7686;
+    --border: #e3e8ef;
+    --accent: #2f6fed;
+    --accent-hover: #1d5ad6;
+    --danger: #d64545;
+    --danger-hover: #b83636;
+    --shadow: 0 8px 24px rgba(28, 36, 48, 0.08);
+    --card-shadow: 0 2px 8px rgba(28, 36, 48, 0.06);
+    --col-leads: #5b8def;
+    --col-talks: #e0a106;
+    --col-pay: #e07a3d;
+    --col-done: #2ea36a;
+    --input-bg: #ffffff;
+    --overlay: rgba(18, 24, 33, 0.45);
+  }
+  [data-theme="dark"] {
+    --bg: #121820;
+    --surface: #1c2530;
+    --text: #e8eef6;
+    --muted: #9aa6b5;
+    --border: #2c3848;
+    --accent: #5b8def;
+    --accent-hover: #7aa3f5;
+    --danger: #e06a6a;
+    --danger-hover: #f08a8a;
+    --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    --card-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    --input-bg: #141c26;
+    --overlay: rgba(0, 0, 0, 0.6);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 16px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  header h1 {
+    font-size: 1.15rem;
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    flex: 1 1 auto;
+    min-width: 160px;
+  }
+  header h1 span { color: var(--accent); }
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  input[type="search"], input[type="text"], input[type="number"], textarea {
+    font: inherit;
+    color: var(--text);
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    outline: none;
+    width: 100%;
+  }
+  input:focus, textarea:focus { border-color: var(--accent); }
+  input[type="search"] { width: min(280px, 70vw); }
+  button {
+    font: inherit;
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 14px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  button:hover { background: var(--accent-hover); }
+  button.ghost {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  button.ghost:hover { background: var(--border); }
+  button.danger { background: var(--danger); }
+  button.danger:hover { background: var(--danger-hover); }
+  button.icon {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid transparent;
+  }
+  button.icon:hover { color: var(--text); background: var(--border); }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(240px, 1fr));
+    gap: 14px;
+    padding: 16px;
+    align-items: start;
+  }
+  @media (max-width: 980px) {
+    .board {
+      grid-template-columns: 1fr;
+      padding: 12px;
+    }
+  }
+  .column {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    min-height: 180px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+  }
+  .column.drag-over { outline: 2px dashed var(--accent); outline-offset: -4px; }
+  .col-head {
+    padding: 12px 14px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .col-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+  .col-leads .dot { background: var(--col-leads); }
+  .col-talks .dot { background: var(--col-talks); }
+  .col-pay .dot { background: var(--col-pay); }
+  .col-done .dot { background: var(--col-done); }
+  .col-sum {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .col-sum strong { color: var(--text); font-variant-numeric: tabular-nums; }
+  .cards {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 80px;
+    flex: 1;
+  }
+  .card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    box-shadow: var(--card-shadow);
+    cursor: grab;
+  }
+  .card:active { cursor: grabbing; }
+  .card.dragging { opacity: 0.45; }
+  .card.hidden { display: none; }
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .client { font-weight: 700; word-break: break-word; }
+  .amount {
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .comment {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .card-actions { display: flex; gap: 2px; margin-top: 6px; }
+  .empty {
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 12px 6px;
+  }
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: var(--overlay);
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 40;
+    padding: 12px;
+  }
+  .modal-backdrop.open { display: flex; }
+  @media (min-width: 640px) {
+    .modal-backdrop { align-items: center; }
+  }
+  .modal {
+    background: var(--surface);
+    color: var(--text);
+    width: min(480px, 100%);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+  .modal h2 { margin: 0 0 12px; font-size: 1.1rem; }
+  label { display: block; font-size: 0.85rem; color: var(--muted); margin: 10px 0 4px; }
+  textarea { min-height: 80px; resize: vertical; }
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .error { color: var(--danger); font-size: 0.85rem; min-height: 1.1em; margin-top: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Мини-CRM <span>сделки</span></h1>
+  <div class="toolbar">
+    <input id="search" type="search" placeholder="Поиск по клиенту или комментарию" autocomplete="off">
+    <button id="addBtn" type="button">+ Сделка</button>
+    <button id="themeBtn" class="ghost" type="button" aria-label="Переключить тему">Тема</button>
+  </div>
+</header>
+<main class="board" id="board"></main>
+
+<div class="modal-backdrop" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <form class="modal" id="form">
+    <h2 id="modalTitle">Новая сделка</h2>
+    <label for="client">Имя клиента</label>
+    <input id="client" type="text" maxlength="120" required placeholder="Например, ООО «Север»">
+    <label for="amount">Сумма, ₽</label>
+    <input id="amount" type="number" min="0" step="1" required placeholder="150000">
+    <label for="comment">Комментарий</label>
+    <textarea id="comment" maxlength="500" placeholder="Кратко о сделке"></textarea>
+    <div class="error" id="formError"></div>
+    <div class="modal-actions">
+      <button type="button" class="ghost" id="cancelBtn">Отмена</button>
+      <button type="submit" id="saveBtn">Сохранить</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function () {
+  var COLUMNS = [
+    { id: "leads", title: "Лиды", cls: "col-leads" },
+    { id: "talks", title: "Переговоры", cls: "col-talks" },
+    { id: "pay", title: "Оплата", cls: "col-pay" },
+    { id: "done", title: "Закрыто", cls: "col-done" }
+  ];
+  var STORAGE_KEY = "mini-crm-deals-v1";
+  var THEME_KEY = "mini-crm-theme";
+  var board = document.getElementById("board");
+  var search = document.getElementById("search");
+  var modal = document.getElementById("modal");
+  var form = document.getElementById("form");
+  var formError = document.getElementById("formError");
+  var modalTitle = document.getElementById("modalTitle");
+  var editingId = null;
+  var dragId = null;
+
+  var deals = loadDeals();
+
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function sampleDeals() {
+    return [
+      { id: uid(), client: "ООО «Северсталь Логистик»", amount: 480000, comment: "Запрос КП на годовое сопровождение", column: "leads" },
+      { id: uid(), client: "ИП Ковалёва", amount: 75000, comment: "Ждём решение по скидке 5%", column: "talks" },
+      { id: uid(), client: "АО «Маяк»", amount: 210000, comment: "Счёт выставлен, оплата до пятницы", column: "pay" },
+      { id: uid(), client: "Кафе «Берёзка»", amount: 42000, comment: "Договор подписан, акт закрыт", column: "done" }
+    ];
+  }
+
+  function loadDeals() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return sampleDeals();
+      var parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return sampleDeals();
+      return parsed.filter(function (d) {
+        return d && typeof d.client === "string" && COLUMNS.some(function (c) { return c.id === d.column; });
+      });
+    } catch (e) {
+      return sampleDeals();
+    }
+  }
+
+  function saveDeals() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(deals));
+  }
+
+  function formatMoney(n) {
+    var num = Number(n) || 0;
+    return num.toLocaleString("ru-RU") + " ₽";
+  }
+
+  function query() {
+    return search.value.trim().toLowerCase();
+  }
+
+  function matches(deal, q) {
+    if (!q) return true;
+    return (deal.client + " " + (deal.comment || "")).toLowerCase().indexOf(q) !== -1;
+  }
+
+  function columnSum(colId, q) {
+    return deals.reduce(function (sum, d) {
+      if (d.column !== colId) return sum;
+      if (!matches(d, q)) return sum;
+      return sum + (Number(d.amount) || 0);
+    }, 0);
+  }
+
+  function render() {
+    var q = query();
+    board.innerHTML = "";
+    COLUMNS.forEach(function (col) {
+      var section = document.createElement("section");
+      section.className = "column " + col.cls;
+      section.dataset.column = col.id;
+
+      var head = document.createElement("div");
+      head.className = "col-head";
+      var title = document.createElement("div");
+      title.className = "col-title";
+      title.innerHTML = '<span class="dot"></span><span></span>';
+      title.lastChild.textContent = col.title;
+      var sum = document.createElement("div");
+      sum.className = "col-sum";
+      sum.innerHTML = "Сумма: <strong></strong>";
+      sum.querySelector("strong").textContent = formatMoney(columnSum(col.id, q));
+      head.appendChild(title);
+      head.appendChild(sum);
+
+      var list = document.createElement("div");
+      list.className = "cards";
+      list.dataset.column = col.id;
+
+      var visible = deals.filter(function (d) { return d.column === col.id; });
+      var shown = 0;
+      visible.forEach(function (deal) {
+        var card = document.createElement("article");
+        card.className = "card";
+        card.draggable = true;
+        card.dataset.id = deal.id;
+        if (!matches(deal, q)) card.classList.add("hidden");
+        else shown += 1;
+
+        var top = document.createElement("div");
+        top.className = "card-top";
+        var client = document.createElement("div");
+        client.className = "client";
+        client.textContent = deal.client;
+        var amount = document.createElement("div");
+        amount.className = "amount";
+        amount.textContent = formatMoney(deal.amount);
+        top.appendChild(client);
+        top.appendChild(amount);
+
+        var comment = document.createElement("p");
+        comment.className = "comment";
+        comment.textContent = deal.comment || "";
+
+        var actions = document.createElement("div");
+        actions.className = "card-actions";
+        var edit = document.createElement("button");
+        edit.type = "button";
+        edit.className = "icon";
+        edit.textContent = "Изменить";
+        edit.addEventListener("click", function () { openModal(deal.id); });
+        var del = document.createElement("button");
+        del.type = "button";
+        del.className = "icon";
+        del.textContent = "Удалить";
+        del.addEventListener("click", function () { removeDeal(deal.id); });
+        actions.appendChild(edit);
+        actions.appendChild(del);
+
+        card.appendChild(top);
+        if (deal.comment) card.appendChild(comment);
+        card.appendChild(actions);
+
+        card.addEventListener("dragstart", onDragStart);
+        card.addEventListener("dragend", onDragEnd);
+        list.appendChild(card);
+      });
+
+      if (shown === 0) {
+        var empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = q ? "Ничего не найдено" : "Перетащите карточку сюда";
+        list.appendChild(empty);
+      }
+
+      list.addEventListener("dragover", onDragOver);
+      list.addEventListener("dragleave", onDragLeave);
+      list.addEventListener("drop", onDrop);
+      section.addEventListener("dragover", onDragOver);
+      section.addEventListener("drop", onDrop);
+
+      section.appendChild(head);
+      section.appendChild(list);
+      board.appendChild(section);
+    });
+  }
+
+  function onDragStart(e) {
+    dragId = e.currentTarget.dataset.id;
+    e.currentTarget.classList.add("dragging");
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", dragId);
+  }
+
+  function onDragEnd(e) {
+    e.currentTarget.classList.remove("dragging");
+    dragId = null;
+    document.querySelectorAll(".column.drag-over").forEach(function (el) {
+      el.classList.remove("drag-over");
+    });
+  }
+
+  function onDragOver(e) {
+    e.preventDefault();
+    var col = e.currentTarget.closest(".column");
+    if (col) col.classList.add("drag-over");
+    e.dataTransfer.dropEffect = "move";
+  }
+
+  function onDragLeave(e) {
+    var col = e.currentTarget.closest(".column");
+    if (col && !col.contains(e.relatedTarget)) col.classList.remove("drag-over");
+  }
+
+  function onDrop(e) {
+    e.preventDefault();
+    var col = e.currentTarget.closest(".column");
+    if (!col) return;
+    col.classList.remove("drag-over");
+    var id = dragId || e.dataTransfer.getData("text/plain");
+    var deal = deals.find(function (d) { return d.id === id; });
+    if (!deal) return;
+    deal.column = col.dataset.column;
+    saveDeals();
+    render();
+  }
+
+  function removeDeal(id) {
+    var deal = deals.find(function (d) { return d.id === id; });
+    if (!deal) return;
+    if (!confirm("Удалить сделку «" + deal.client + "»?")) return;
+    deals = deals.filter(function (d) { return d.id !== id; });
+    saveDeals();
+    render();
+  }
+
+  function openModal(id) {
+    editingId = id || null;
+    formError.textContent = "";
+    if (id) {
+      var deal = deals.find(function (d) { return d.id === id; });
+      if (!deal) return;
+      modalTitle.textContent = "Редактирование сделки";
+      document.getElementById("client").value = deal.client;
+      document.getElementById("amount").value = deal.amount;
+      document.getElementById("comment").value = deal.comment || "";
+    } else {
+      modalTitle.textContent = "Новая сделка";
+      form.reset();
+    }
+    modal.classList.add("open");
+    setTimeout(function () { document.getElementById("client").focus(); }, 30);
+  }
+
+  function closeModal() {
+    modal.classList.remove("open");
+    editingId = null;
+    form.reset();
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var client = document.getElementById("client").value.trim();
+    var amountRaw = document.getElementById("amount").value;
+    var comment = document.getElementById("comment").value.trim();
+    var amount = Number(amountRaw);
+    if (!client) {
+      formError.textContent = "Укажите имя клиента.";
+      return;
+    }
+    if (!isFinite(amount) || amount < 0) {
+      formError.textContent = "Сумма должна быть неотрицательным числом.";
+      return;
+    }
+    if (editingId) {
+      var deal = deals.find(function (d) { return d.id === editingId; });
+      if (deal) {
+        deal.client = client;
+        deal.amount = Math.round(amount);
+        deal.comment = comment;
+      }
+    } else {
+      deals.unshift({
+        id: uid(),
+        client: client,
+        amount: Math.round(amount),
+        comment: comment,
+        column: "leads"
+      });
+    }
+    saveDeals();
+    closeModal();
+    render();
+  });
+
+  document.getElementById("addBtn").addEventListener("click", function () { openModal(null); });
+  document.getElementById("cancelBtn").addEventListener("click", closeModal);
+  modal.addEventListener("click", function (e) {
+    if (e.target === modal) closeModal();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && modal.classList.contains("open")) closeModal();
+  });
+  search.addEventListener("input", render);
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    document.getElementById("themeBtn").textContent = theme === "dark" ? "Светлая" : "Тёмная";
+    localStorage.setItem(THEME_KEY, theme);
+  }
+  var savedTheme = localStorage.getItem(THEME_KEY);
+  if (savedTheme !== "dark" && savedTheme !== "light") {
+    savedTheme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  applyTheme(savedTheme);
+  document.getElementById("themeBtn").addEventListener("click", function () {
+    var current = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    applyTheme(current);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

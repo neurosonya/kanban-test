@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f4f6fb">
+  <title>Мини-CRM — канбан сделок</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --page-bg: #f4f6fb;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --column-bg: #edf1f7;
+      --text: #172033;
+      --muted: #64748b;
+      --border: #dce3ee;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-soft: rgba(79, 70, 229, 0.09);
+      --accent-text: #4f46e5;
+      --danger: #dc2626;
+      --danger-soft: rgba(220, 38, 38, 0.09);
+      --hover: #e9edf5;
+      --shadow: 0 10px 30px rgba(30, 41, 59, 0.08);
+      --card-shadow: 0 3px 10px rgba(30, 41, 59, 0.05);
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --page-bg: #0b1120;
+      --surface: #172237;
+      --surface-soft: #111b2c;
+      --column-bg: #111b2c;
+      --text: #e8eef8;
+      --muted: #9aa9bd;
+      --border: #2b3a52;
+      --primary: #6366f1;
+      --primary-hover: #7477f2;
+      --primary-soft: rgba(99, 102, 241, 0.15);
+      --accent-text: #a5b4fc;
+      --danger: #f87171;
+      --danger-soft: rgba(248, 113, 113, 0.12);
+      --hover: #223149;
+      --shadow: 0 14px 36px rgba(0, 0, 0, 0.3);
+      --card-shadow: 0 3px 12px rgba(0, 0, 0, 0.16);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    html {
+      min-width: 320px;
+      background: var(--page-bg);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--page-bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      line-height: 1.5;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    body.modal-open {
+      overflow: hidden;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      color: inherit;
+    }
+
+    button,
+    .deal-card {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible,
+    select:focus-visible {
+      outline: 3px solid rgba(99, 102, 241, 0.28);
+      outline-offset: 2px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 28px 24px 36px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(25px, 3vw, 34px);
+      line-height: 1.2;
+      letter-spacing: -0.03em;
+    }
+
+    .brand p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .button {
+      min-height: 42px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 9px 15px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 650;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    }
+
+    .button:active {
+      transform: translateY(1px);
+    }
+
+    .button-primary {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .button-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .button-secondary {
+      background: var(--surface);
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    .button-secondary:hover {
+      background: var(--hover);
+    }
+
+    .theme-icon {
+      width: 18px;
+      font-size: 20px;
+      line-height: 1;
+      text-align: center;
+    }
+
+    .toolbar {
+      margin: 24px 0 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .search-box {
+      min-width: 0;
+      width: min(100%, 560px);
+      min-height: 46px;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      color: var(--muted);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .search-box:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-soft);
+    }
+
+    .search-box svg {
+      width: 19px;
+      height: 19px;
+      flex-shrink: 0;
+    }
+
+    .search-box input {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      padding: 11px 0;
+      background: transparent;
+      color: var(--text);
+    }
+
+    .search-box input::placeholder {
+      color: var(--muted);
+    }
+
+    .totals {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .totals strong {
+      color: var(--text);
+    }
+
+    .total-amount {
+      padding: 7px 11px;
+      border-radius: 9px;
+      background: var(--primary-soft);
+      color: var(--accent-text);
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      align-items: start;
+      gap: 16px;
+    }
+
+    .column {
+      min-width: 0;
+      min-height: 450px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      background: var(--column-bg);
+      overflow: hidden;
+    }
+
+    .column-header {
+      padding: 16px 16px 12px;
+    }
+
+    .column-title-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .column-title-line h2 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.3;
+    }
+
+    .column-count {
+      min-width: 25px;
+      height: 25px;
+      padding: 0 7px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .column-sum {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .column-sum strong {
+      color: var(--accent-text);
+      font-size: 14px;
+      overflow-wrap: anywhere;
+    }
+
+    .cards {
+      min-height: 210px;
+      flex: 1;
+      margin: 0 8px;
+      padding: 4px 4px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border: 2px dashed transparent;
+      border-radius: 12px;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .cards.drag-over {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .deal-card {
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      box-shadow: var(--card-shadow);
+      cursor: grab;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    .deal-card:hover {
+      border-color: rgba(99, 102, 241, 0.55);
+      box-shadow: var(--shadow);
+      transform: translateY(-1px);
+    }
+
+    .deal-card:active {
+      cursor: grabbing;
+    }
+
+    .deal-card.dragging {
+      opacity: 0.45;
+      transform: none;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .client-name {
+      min-width: 0;
+      margin: 1px 0 0;
+      font-size: 15px;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 3px;
+      flex-shrink: 0;
+      margin: -4px -5px 0 0;
+    }
+
+    .icon-button {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      display: inline-grid;
+      place-items: center;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .icon-button svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .icon-button:hover {
+      background: var(--hover);
+      color: var(--text);
+    }
+
+    .icon-button.delete-button:hover {
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .deal-amount {
+      margin: 10px 0 0;
+      color: var(--accent-text);
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      overflow-wrap: anywhere;
+    }
+
+    .deal-comment {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .empty-state {
+      min-height: 105px;
+      padding: 20px 10px;
+      display: grid;
+      place-items: center;
+      border: 1px dashed var(--border);
+      border-radius: 11px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .column-add {
+      min-height: 42px;
+      margin: 0 12px 12px;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+      cursor: pointer;
+      transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .column-add:hover {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+      color: var(--accent-text);
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      padding: 18px;
+      display: grid;
+      place-items: center;
+      overflow-y: auto;
+      background: rgba(4, 10, 24, 0.65);
+      backdrop-filter: blur(3px);
+    }
+
+    .modal-panel {
+      width: min(100%, 520px);
+      max-height: calc(100vh - 36px);
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 17px;
+      background: var(--surface);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+      padding: 20px 22px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 21px;
+      line-height: 1.3;
+    }
+
+    .modal-close {
+      flex-shrink: 0;
+      font-size: 25px;
+      line-height: 1;
+    }
+
+    .deal-form {
+      padding: 4px 22px 22px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field {
+      min-width: 0;
+      margin-bottom: 15px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .required {
+      color: var(--danger);
+    }
+
+    .field input,
+    .field textarea,
+    .field select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface-soft);
+      color: var(--text);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .field input,
+    .field select {
+      min-height: 43px;
+      padding: 9px 11px;
+    }
+
+    .field textarea {
+      min-height: 100px;
+      padding: 10px 11px;
+      resize: vertical;
+    }
+
+    .field input:focus,
+    .field textarea:focus,
+    .field select:focus {
+      outline: 0;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-soft);
+    }
+
+    .field input::placeholder,
+    .field textarea::placeholder {
+      color: var(--muted);
+    }
+
+    .form-error {
+      margin: 0 0 14px;
+      padding: 9px 11px;
+      border-radius: 9px;
+      background: var(--danger-soft);
+      color: var(--danger);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: 3px;
+    }
+
+    .noscript {
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+    }
+
+    @media (max-width: 1200px) {
+      .board {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .column {
+        min-height: 360px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        padding: 20px 14px 28px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .header-actions {
+        width: 100%;
+      }
+
+      .header-actions .button {
+        flex: 1;
+      }
+
+      .toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .search-box {
+        width: 100%;
+      }
+
+      .totals {
+        justify-content: space-between;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .board {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .column {
+        min-height: 245px;
+      }
+
+      .cards {
+        min-height: 105px;
+      }
+
+      .deal-card {
+        cursor: default;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .app {
+        padding-inline: 11px;
+      }
+
+      .header-actions {
+        gap: 8px;
+      }
+
+      .header-actions .button {
+        padding-inline: 10px;
+        font-size: 13px;
+      }
+
+      .totals {
+        gap: 8px;
+        font-size: 12px;
+      }
+
+      .total-amount {
+        font-size: 13px;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+
+      .modal {
+        padding: 10px;
+      }
+
+      .modal-panel {
+        max-height: calc(100vh - 20px);
+      }
+
+      .modal-header {
+        padding: 18px 18px 12px;
+      }
+
+      .deal-form {
+        padding: 4px 18px 18px;
+      }
+
+      .form-actions .button {
+        flex: 1;
+      }
+    }
+
+    @media (hover: none) {
+      .icon-button {
+        width: 38px;
+        height: 38px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>Мини-CRM</h1>
+        <p>Канбан-доска сделок отдела продаж</p>
+      </div>
+      <div class="header-actions">
+        <button class="button button-secondary" id="themeToggle" type="button">
+          <span class="theme-icon" id="themeIcon" aria-hidden="true">☾</span>
+          <span id="themeText">Тёмная тема</span>
+        </button>
+        <button class="button button-primary" id="addDealButton" type="button">
+          <span aria-hidden="true">＋</span>
+          Новая сделка
+        </button>
+      </div>
+    </header>
+
+    <section class="toolbar" aria-label="Поиск и статистика">
+      <label class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="m20 20-4-4"></path>
+        </svg>
+        <input id="searchInput" type="search" placeholder="Поиск по клиенту, комментарию или сумме…" aria-label="Поиск по карточкам">
+      </label>
+      <div class="totals" aria-live="polite">
+        <span>Всего сделок: <strong id="totalCount">0</strong></span>
+        <span class="total-amount" id="totalAmount">0 ₽</span>
+      </div>
+    </section>
+
+    <noscript>
+      <p class="noscript">Для работы доски включите JavaScript в браузере.</p>
+    </noscript>
+
+    <section class="board" id="board" aria-label="Канбан-доска сделок"></section>
+  </main>
+
+  <div class="modal" id="dealModal" hidden>
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <h2 id="modalTitle">Новая сделка</h2>
+        <button class="icon-button modal-close" id="modalCloseButton" type="button" aria-label="Закрыть" title="Закрыть">×</button>
+      </div>
+
+      <form class="deal-form" id="dealForm" novalidate autocomplete="off">
+        <input id="dealId" type="hidden">
+
+        <div class="field">
+          <label for="clientName">Имя клиента <span class="required" aria-hidden="true">*</span></label>
+          <input id="clientName" type="text" maxlength="120" placeholder="Например, ООО «Ромашка»" required>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label for="dealAmount">Сумма, ₽ <span class="required" aria-hidden="true">*</span></label>
+            <input id="dealAmount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0" required>
+          </div>
+          <div class="field">
+            <label for="dealStatus">Колонка</label>
+            <select id="dealStatus">
+              <option value="leads">Лиды</option>
+              <option value="negotiations">Переговоры</option>
+              <option value="payment">Оплата</option>
+              <option value="closed">Закрыто</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="dealComment">Комментарий</label>
+          <textarea id="dealComment" maxlength="1000" placeholder="Детали переговоров, следующий шаг…"></textarea>
+        </div>
+
+        <p class="form-error" id="formError" role="alert" hidden></p>
+
+        <div class="form-actions">
+          <button class="button button-secondary" id="cancelButton" type="button">Отмена</button>
+          <button class="button button-primary" id="submitButton" type="submit">Добавить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const STORAGE_KEY = "mini-crm-deals-v1";
+      const THEME_KEY = "mini-crm-theme-v1";
+
+      const COLUMNS = [
+        { id: "leads", title: "Лиды" },
+        { id: "negotiations", title: "Переговоры" },
+        { id: "payment", title: "Оплата" },
+        { id: "closed", title: "Закрыто" }
+      ];
+
+      const moneyFormatter = new Intl.NumberFormat("ru-RU", {
+        style: "currency",
+        currency: "RUB",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      });
+
+      const board = document.getElementById("board");
+      const searchInput = document.getElementById("searchInput");
+      const totalCount = document.getElementById("totalCount");
+      const totalAmount = document.getElementById("totalAmount");
+      const addDealButton = document.getElementById("addDealButton");
+
+      const themeToggle = document.getElementById("themeToggle");
+      const themeIcon = document.getElementById("themeIcon");
+      const themeText = document.getElementById("themeText");
+      const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+
+      const dealModal = document.getElementById("dealModal");
+      const modalTitle = document.getElementById("modalTitle");
+      const modalCloseButton = document.getElementById("modalCloseButton");
+      const cancelButton = document.getElementById("cancelButton");
+      const submitButton = document.getElementById("submitButton");
+      const dealForm = document.getElementById("dealForm");
+      const dealIdInput = document.getElementById("dealId");
+      const clientNameInput = document.getElementById("clientName");
+      const dealAmountInput = document.getElementById("dealAmount");
+      const dealStatusInput = document.getElementById("dealStatus");
+      const dealCommentInput = document.getElementById("dealComment");
+      const formError = document.getElementById("formError");
+
+      let deals = loadDeals();
+      let draggedId = null;
+      let lastFocusedElement = null;
+
+      saveDeals();
+      applyTheme(getInitialTheme());
+      render();
+
+      function createDemoDeals() {
+        return [
+          {
+            id: "demo-1",
+            client: "ООО «Северная звезда»",
+            amount: 185000,
+            comment: "Запросили расчёт на поставку оборудования.",
+            status: "leads"
+          },
+          {
+            id: "demo-2",
+            client: "ИП Алексеев",
+            amount: 96000,
+            comment: "Обсуждаем условия договора и сроки.",
+            status: "negotiations"
+          },
+          {
+            id: "demo-3",
+            client: "ООО «Вектор»",
+            amount: 240000,
+            comment: "Счёт выставлен, ждём оплату.",
+            status: "payment"
+          },
+          {
+            id: "demo-4",
+            client: "АО «Меридиан»",
+            amount: 312500,
+            comment: "Оплата получена, сделка завершена.",
+            status: "closed"
+          }
+        ];
+      }
+
+      function createId() {
+        if (window.crypto && typeof window.crypto.randomUUID === "function") {
+          return window.crypto.randomUUID();
+        }
+        return "deal-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+      }
+
+      function readStorage(key) {
+        try {
+          return window.localStorage.getItem(key);
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function writeStorage(key, value) {
+        try {
+          window.localStorage.setItem(key, value);
+        } catch (error) {
+          // Работа доски продолжается, даже если хранилище недоступно.
+        }
+      }
+
+      function normalizeDeal(item) {
+        if (!item || typeof item !== "object") {
+          return null;
+        }
+
+        const client = typeof item.client === "string" ? item.client.trim() : "";
+        const amount = Number(item.amount);
+        const validStatus = COLUMNS.some(column => column.id === item.status);
+
+        if (!client || !Number.isFinite(amount) || amount < 0 || !validStatus) {
+          return null;
+        }
+
+        return {
+          id: typeof item.id === "string" && item.id ? item.id : createId(),
+          client,
+          amount: Math.round(amount * 100) / 100,
+          comment: typeof item.comment === "string" ? item.comment : "",
+          status: item.status
+        };
+      }
+
+      function loadDeals() {
+        const saved = readStorage(STORAGE_KEY);
+
+        if (saved === null) {
+          return createDemoDeals();
+        }
+
+        try {
+          const parsed = JSON.parse(saved);
+          if (!Array.isArray(parsed)) {
+            return createDemoDeals();
+          }
+          return parsed.map(normalizeDeal).filter(Boolean);
+        } catch (error) {
+          return createDemoDeals();
+        }
+      }
+
+      function saveDeals() {
+        writeStorage(STORAGE_KEY, JSON.stringify(deals));
+      }
+
+      function formatMoney(value) {
+        return moneyFormatter.format(value);
+      }
+
+      function getInitialTheme() {
+        const savedTheme = readStorage(THEME_KEY);
+        if (savedTheme === "light" || savedTheme === "dark") {
+          return savedTheme;
+        }
+
+        if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+          return "dark";
+        }
+
+        return "light";
+      }
+
+      function applyTheme(theme) {
+        const isDark = theme === "dark";
+        document.documentElement.dataset.theme = isDark ? "dark" : "light";
+        themeToggle.setAttribute("aria-pressed", String(isDark));
+        themeToggle.setAttribute("aria-label", isDark ? "Включить светлую тему" : "Включить тёмную тему");
+        themeToggle.title = isDark ? "Включить светлую тему" : "Включить тёмную тему";
+        themeIcon.textContent = isDark ? "☀" : "☾";
+        themeText.textContent = isDark ? "Светлая тема" : "Тёмная тема";
+        themeColorMeta.content = isDark ? "#0b1120" : "#f4f6fb";
+      }
+
+      themeToggle.addEventListener("click", () => {
+        const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+        applyTheme(nextTheme);
+        writeStorage(THEME_KEY, nextTheme);
+      });
+
+      function makeElement(tag, className, text) {
+        const element = document.createElement(tag);
+        if (className) {
+          element.className = className;
+        }
+        if (text !== undefined) {
+          element.textContent = text;
+        }
+        return element;
+      }
+
+      function matchesSearch(deal, query) {
+        if (!query) {
+          return true;
+        }
+
+        const searchableText = [
+          deal.client,
+          deal.comment,
+          String(deal.amount),
+          formatMoney(deal.amount)
+        ].join(" ").toLocaleLowerCase("ru-RU");
+
+        return searchableText.includes(query);
+      }
+
+      function createDealCard(deal) {
+        const card = makeElement("article", "deal-card");
+        card.draggable = true;
+        card.dataset.id = deal.id;
+        card.setAttribute("aria-label", "Сделка: " + deal.client);
+
+        const cardTop = makeElement("div", "card-top");
+        const clientName = makeElement("h3", "client-name", deal.client);
+        const actions = makeElement("div", "card-actions");
+
+        const editButton = makeElement("button", "icon-button");
+        editButton.type = "button";
+        editButton.title = "Редактировать сделку";
+        editButton.setAttribute("aria-label", "Редактировать сделку " + deal.client);
+        editButton.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path>
+          </svg>
+        `;
+        editButton.addEventListener("click", () => openDealModal(deal));
+
+        const deleteButton = makeElement("button", "icon-button delete-button");
+        deleteButton.type = "button";
+        deleteButton.title = "Удалить сделку";
+        deleteButton.setAttribute("aria-label", "Удалить сделку " + deal.client);
+        deleteButton.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h18"></path>
+            <path d="M8 6V4h8v2"></path>
+            <path d="M19 6l-1 14H6L5 6"></path>
+            <path d="M10 11v5M14 11v5"></path>
+          </svg>
+        `;
+        deleteButton.addEventListener("click", () => {
+          if (window.confirm("Удалить сделку «" + deal.client + "»?")) {
+            deals = deals.filter(item => item.id !== deal.id);
+            saveDeals();
+            render();
+          }
+        });
+
+        actions.append(editButton, deleteButton);
+        cardTop.append(clientName, actions);
+
+        const amount = makeElement("p", "deal-amount", formatMoney(deal.amount));
+        card.append(cardTop, amount);
+
+        if (deal.comment) {
+          card.appendChild(makeElement("p", "deal-comment", deal.comment));
+        }
+
+        card.addEventListener("dragstart", event => {
+          draggedId = deal.id;
+          card.classList.add("dragging");
+
+          if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", deal.id);
+          }
+        });
+
+        card.addEventListener("dragend", () => {
+          draggedId = null;
+          card.classList.remove("dragging");
+          document.querySelectorAll(".cards.drag-over").forEach(list => {
+            list.classList.remove("drag-over");
+          });
+        });
+
+        return card;
+      }
+
+      function getDragAfterElement(container, y) {
+        const cards = Array.from(container.querySelectorAll(".deal-card:not(.dragging)"));
+
+        return cards.reduce((closest, card) => {
+          const box = card.getBoundingClientRect();
+          const offset = y - box.top - box.height / 2;
+
+          if (offset < 0 && offset > closest.offset) {
+            return { offset, element: card };
+          }
+
+          return closest;
+        }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
+      }
+
+      function setupDropZone(list, status) {
+        list.addEventListener("dragover", event => {
+          if (!draggedId) {
+            return;
+          }
+
+          event.preventDefault();
+          if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = "move";
+          }
+
+          document.querySelectorAll(".cards.drag-over").forEach(otherList => {
+            if (otherList !== list) {
+              otherList.classList.remove("drag-over");
+            }
+          });
+          list.classList.add("drag-over");
+        });
+
+        list.addEventListener("dragleave", event => {
+          if (!event.relatedTarget || !list.contains(event.relatedTarget)) {
+            list.classList.remove("drag-over");
+          }
+        });
+
+        list.addEventListener("drop", event => {
+          event.preventDefault();
+          list.classList.remove("drag-over");
+
+          const transferId = event.dataTransfer ? event.dataTransfer.getData("text/plain") : "";
+          const id = draggedId || transferId;
+          const dealIndex = deals.findIndex(deal => deal.id === id);
+
+          if (dealIndex === -1) {
+            return;
+          }
+
+          const afterElement = getDragAfterElement(list, event.clientY);
+          const [movedDeal] = deals.splice(dealIndex, 1);
+          movedDeal.status = status;
+
+          if (afterElement) {
+            const afterIndex = deals.findIndex(deal => deal.id === afterElement.dataset.id);
+            if (afterIndex === -1) {
+              deals.push(movedDeal);
+            } else {
+              deals.splice(afterIndex, 0, movedDeal);
+            }
+          } else {
+            deals.push(movedDeal);
+          }
+
+          draggedId = null;
+          saveDeals();
+          render();
+        });
+      }
+
+      function render() {
+        const query = searchInput.value.trim().toLocaleLowerCase("ru-RU");
+        board.textContent = "";
+
+        totalCount.textContent = String(deals.length);
+        totalAmount.textContent = formatMoney(
+          deals.reduce((sum, deal) => sum + deal.amount, 0)
+        );
+
+        COLUMNS.forEach(column => {
+          const columnDeals = deals.filter(deal => deal.status === column.id);
+          const visibleDeals = columnDeals.filter(deal => matchesSearch(deal, query));
+          const columnSum = columnDeals.reduce((sum, deal) => sum + deal.amount, 0);
+
+          const section = makeElement("section", "column");
+          section.dataset.status = column.id;
+          section.setAttribute("aria-label", column.title);
+
+          const header = makeElement("header", "column-header");
+          const titleLine = makeElement("div", "column-title-line");
+          const title = makeElement("h2", "", column.title);
+          const count = makeElement("span", "column-count", String(columnDeals.length));
+          count.title = "Количество сделок";
+          titleLine.append(title, count);
+
+          const sumLine = makeElement("p", "column-sum");
+          const sumValue = makeElement("strong", "", formatMoney(columnSum));
+          sumValue.title = "Сумма всех сделок в колонке";
+          sumLine.append(document.createTextNode("Сумма: "), sumValue);
+          header.append(titleLine, sumLine);
+
+          const list = makeElement("div", "cards");
+          list.dataset.status = column.id;
+          list.setAttribute("aria-label", "Сделки в колонке «" + column.title + "»");
+
+          if (visibleDeals.length === 0) {
+            const emptyText = query ? "Ничего не найдено" : "Перетащите карточку сюда";
+            list.appendChild(makeElement("div", "empty-state", emptyText));
+          } else {
+            visibleDeals.forEach(deal => {
+              list.appendChild(createDealCard(deal));
+            });
+          }
+
+          setupDropZone(list, column.id);
+
+          const quickAddButton = makeElement("button", "column-add", "＋ Добавить сделку");
+          quickAddButton.type = "button";
+          quickAddButton.addEventListener("click", () => openDealModal(null, column.id));
+
+          section.append(header, list, quickAddButton);
+          board.appendChild(section);
+        });
+      }
+
+      function openDealModal(deal = null, defaultStatus = "leads") {
+        lastFocusedElement = document.activeElement;
+        dealForm.reset();
+        formError.hidden = true;
+        formError.textContent = "";
+
+        if (deal) {
+          modalTitle.textContent = "Редактировать сделку";
+          submitButton.textContent = "Сохранить";
+          dealIdInput.value = deal.id;
+          clientNameInput.value = deal.client;
+          dealAmountInput.value = String(deal.amount);
+          dealStatusInput.value = deal.status;
+          dealCommentInput.value = deal.comment;
+        } else {
+          modalTitle.textContent = "Новая сделка";
+          submitButton.textContent = "Добавить";
+          dealIdInput.value = "";
+          dealStatusInput.value = defaultStatus;
+        }
+
+        dealModal.hidden = false;
+        document.body.classList.add("modal-open");
+
+        window.requestAnimationFrame(() => {
+          clientNameInput.focus();
+        });
+      }
+
+      function closeDealModal() {
+        dealModal.hidden = true;
+        document.body.classList.remove("modal-open");
+
+        if (lastFocusedElement && lastFocusedElement.isConnected) {
+          lastFocusedElement.focus();
+        }
+      }
+
+      function showFormError(message, field) {
+        formError.textContent = message;
+        formError.hidden = false;
+        field.focus();
+      }
+
+      addDealButton.addEventListener("click", () => openDealModal());
+      modalCloseButton.addEventListener("click", closeDealModal);
+      cancelButton.addEventListener("click", closeDealModal);
+
+      dealModal.addEventListener("click", event => {
+        if (event.target === dealModal) {
+          closeDealModal();
+        }
+      });
+
+      document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && !dealModal.hidden) {
+          closeDealModal();
+        }
+      });
+
+      dealForm.addEventListener("input", () => {
+        formError.hidden = true;
+      });
+
+      dealForm.addEventListener("submit", event => {
+        event.preventDefault();
+
+        const client = clientNameInput.value.trim();
+        const amount = dealAmountInput.valueAsNumber;
+        const comment = dealCommentInput.value.trim();
+        const status = COLUMNS.some(column => column.id === dealStatusInput.value)
+          ? dealStatusInput.value
+          : "leads";
+
+        if (!client) {
+          showFormError("Введите имя клиента.", clientNameInput);
+          return;
+        }
+
+        if (dealAmountInput.value.trim() === "" || !Number.isFinite(amount) || amount < 0) {
+          showFormError("Введите корректную сумму — не меньше 0 ₽.", dealAmountInput);
+          return;
+        }
+
+        const data = {
+          client,
+          amount: Math.round(amount * 100) / 100,
+          comment,
+          status
+        };
+
+        const editingId = dealIdInput.value;
+        const existingIndex = deals.findIndex(deal => deal.id === editingId);
+
+        if (existingIndex >= 0) {
+          deals[existingIndex] = {
+            ...deals[existingIndex],
+            ...data
+          };
+        } else {
+          deals.push({
+            id: createId(),
+            ...data
+          });
+        }
+
+        saveDeals();
+        closeDealModal();
+        render();
+      });
+
+      searchInput.addEventListener("input", render);
+    })();
+  </script>
+</body>
+</html>
